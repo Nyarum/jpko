@@ -2,6 +2,7 @@ module jpko
 
     using Sockets
     using Dates
+    using Parameters
 
     function write_pko(buf, str::String)
         write(buf, hton(UInt16(length(str))))
@@ -10,14 +11,31 @@ module jpko
 
     abstract type Packet end
 
+    using Match
+
+    function build_universal(struct_type)
+        new_buf = IOBuffer()
+
+        for v in fieldnames(typeof(struct_type))
+            field = getfield(struct_type, v)
+
+            @match field begin
+                ::Vector{UInt8} =>  write(new_buf, field)
+                ::Vector        => for st in field build_universal(st) end
+                ::String        => write_pko(new_buf, field)
+                _               => write(new_buf, hton(field))
+            end
+        end
+
+        new_buf
+    end
+
     function build_final(packet::Packet)
         if packet === nothing
             return UInt8[]
         end
         
-        buf = build(packet)
-
-        println("test")
+        buf = build_universal(packet)
         
         new_buf = IOBuffer()
         write(new_buf, hton(UInt16(buf.size + 6)))
@@ -27,27 +45,15 @@ module jpko
         return take!(new_buf)
     end
 
-    struct FirstDate <: Packet
-        opcode::UInt16
-        date::String
-    end
-
     function get_current_time()
         time_now = now()
         return string("[", Dates.format(time_now, "mm-dd HH:MM:SS.sss"), "]")
     end
 
-    FirstDate() = FirstDate(940, get_current_time())
-
-    function build(packet::FirstDate)
-        new_buf = IOBuffer()
-        write(new_buf, hton(packet.opcode))
-        write_pko(new_buf, packet.date)
-
-        return new_buf
+    @with_kw struct FirstDate <: Packet
+        opcode::UInt16 = 940
+        date::String = get_current_time()
     end
-
-    using Serialization
 
     struct Auth
         key_len::UInt16
@@ -103,22 +109,17 @@ module jpko
         look::Look
     end
     
-    struct CharactersChoice <: Packet
-        opcode::UInt16
-        error_code::UInt16
-        key_len::UInt16
-        key::Vector{UInt8}
-        character_len::UInt8
-        characters::Vector{Character}
-        pincode::UInt8
-        encryption::UInt32
-        dw_flag::UInt32
+    @with_kw struct CharactersChoice <: Packet
+        opcode::UInt16 = 931
+        error_code::UInt16 = 0
+        key_len::UInt16 = 8
+        key::Vector{UInt8} = [0x7C, 0x35, 0x09, 0x19, 0xB2, 0x50, 0xD3, 0x49]
+        character_len::UInt8 = 0
+        characters::Vector{Character} = []
+        pincode::UInt8 = 1
+        encryption::UInt32 = 0
+        dw_flag::UInt32 = 12820
     end
-
-    CharactersChoice() = CharactersChoice(
-        931, 0, 8, Vector{UInt8}([0x7C, 0x35, 0x09, 0x19, 0xB2, 0x50, 0xD3, 0x49]),
-        0, Vector{Character}(), 1, 0, 12820
-    )
 
     function build(packet::CharactersChoice)
         new_buf = IOBuffer()
@@ -133,7 +134,7 @@ module jpko
 
         return new_buf
     end
-
+  
     function handle_client(client::IO)
         try
             while true
