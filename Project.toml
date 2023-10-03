@@ -2,3 +2,9 @@ name = "jpko"
 uuid = "bf7e6869-d353-443c-b9a8-50637d02d54c"
 authors = ["Nyarum <nyarumilian@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Match = "7eb4fadd-790c-5f42-8a69-bfa0b872bfbf"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"

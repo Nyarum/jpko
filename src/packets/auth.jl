@@ -1,10 +1,10 @@
-module AuthPackets
+module Auths
 
-include("packets.jl")
+export FirstDate, CharactersChoice
 
 using Dates
 using Parameters
-using .Packets
+using ..Packets
 
 function get_current_time()
     time_now = now()
@@ -81,7 +81,5 @@ end
     encryption::UInt32 = 0
     dw_flag::UInt32 = 12820
 end
-
-export FirstDate, CharactersChoice
 
 end

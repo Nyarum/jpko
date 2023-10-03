@@ -1,7 +1,15 @@
 module Packets
 
+export Packet
+
 abstract type Packet end
 
-export Packet
+include("handler.jl")
+
+using .Handler
+
+include("auth.jl")
+
+using .Auths
 
 end
